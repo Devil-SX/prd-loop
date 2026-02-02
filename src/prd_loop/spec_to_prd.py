@@ -19,6 +19,7 @@ Note: .prd directory will be automatically initialized if not exists.
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -273,8 +274,9 @@ def main():
         print(f"Error: Spec file not found: {spec_path}")
         return 1
 
-    # Determine project root (current directory)
-    project_root = Path.cwd()
+    # Determine project root (from env var or current directory)
+    # PRD_LOOP_WORKDIR is set by the wrapper script to preserve original cwd
+    project_root = Path(os.environ.get("PRD_LOOP_WORKDIR", ".")).resolve()
 
     # Initialize .prd directory (auto-detect and create if needed)
     prd_dir = PrdDir(project_root)
