@@ -1,7 +1,6 @@
 """Configuration management for PRD Loop."""
 
 import json
-import os
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import List, Optional
@@ -109,18 +108,12 @@ def find_project_root(start_path: Path = None) -> Optional[Path]:
     Find the project root by searching for .prd directory.
 
     Args:
-        start_path: Starting path to search from (default: PRD_LOOP_WORKDIR or cwd)
+        start_path: Starting path to search from (default: current directory)
 
     Returns:
         Path to directory containing .prd, or None if not found
     """
-    if start_path:
-        current = start_path
-    else:
-        # PRD_LOOP_WORKDIR is set by wrapper script to preserve original cwd
-        workdir = os.environ.get("PRD_LOOP_WORKDIR")
-        current = Path(workdir) if workdir else Path.cwd()
-    current = current.resolve()
+    current = (start_path or Path.cwd()).resolve()
 
     # Search up the directory tree
     while current != current.parent:

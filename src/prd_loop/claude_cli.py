@@ -170,9 +170,10 @@ class ClaudeCLI:
         Monitor streaming output with timeout detection.
 
         Returns:
-            (output_string, timed_out, timeout_reason)
+            (text_content, timed_out, timeout_reason)
+            text_content is the extracted text from Claude's response (not raw JSON)
         """
-        output_lines = []
+        text_chunks = []  # Extracted text content
         self.last_output_time = time.time()
 
         # Use select for non-blocking read (Unix-specific)
@@ -185,7 +186,7 @@ class ClaudeCLI:
             if idle_time > self.output_timeout:
                 process.kill()
                 process.wait()
-                return "".join(output_lines), True, "output_timeout"
+                return "".join(text_chunks), True, "output_timeout"
 
             # Non-blocking read with 1 second timeout
             if sys.platform != "win32":
@@ -206,21 +207,22 @@ class ClaudeCLI:
 
                 line = line.decode("utf-8", errors="replace")
                 self.last_output_time = time.time()
-                output_lines.append(line)
 
                 # Write raw output to log file if provided
                 if log_file:
                     log_file.write(line)
                     log_file.flush()
 
-                # Parse and display stream content
-                self._handle_stream_line(line, on_output)
+                # Parse stream and extract text content
+                text = self._handle_stream_line(line, on_output)
+                if text:
+                    text_chunks.append(text)
 
             except Exception:
                 if process.poll() is not None:
                     break
 
-        return "".join(output_lines), False, ""
+        return "".join(text_chunks), False, ""
 
     def _handle_stream_line(
         self,

@@ -19,7 +19,6 @@ Note: .prd directory will be automatically initialized if not exists.
 
 import argparse
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -52,8 +51,8 @@ Before generating the PRD, you MUST:
 ## Input Spec:
 {spec_content}
 
-## Output Requirements
-After analyzing the project, generate a valid JSON object with this exact structure:
+## PRD JSON Structure
+Generate a valid JSON object with this exact structure:
 ```json
 {{
   "project": "[Project name from spec or '{project_name}']",
@@ -89,9 +88,14 @@ After analyzing the project, generate a valid JSON object with this exact struct
 - If existing tests exist: Stories should include updating/adding tests
 - Reference the actual file paths you discovered during exploration
 
-## Final Output
-After your analysis, output ONLY the JSON object (no markdown code blocks, no explanation).
-The JSON must be valid and parseable.
+## IMPORTANT: Save PRD to File
+After your analysis, use the Write tool to save the PRD JSON to this directory:
+  {prds_dir}
+
+Name the file based on the project/feature name in kebab-case with .json extension.
+For example: my-feature.json, user-auth.json, api-refactor.json
+
+The JSON must be valid and parseable. Do NOT wrap it in markdown code blocks.
 '''
 
 
@@ -187,10 +191,10 @@ def convert_spec_to_prd(
     logger: PrdLogger,
     config: Config,
     model: str = "sonnet"
-) -> PRD:
+) -> tuple[PRD, Path]:
     """
     Convert a spec file to PRD using Claude.
-    Claude will explore the project structure itself using its tools.
+    Claude will explore the project structure and write PRD to file.
 
     Args:
         spec_path: Path to spec markdown file
@@ -201,7 +205,7 @@ def convert_spec_to_prd(
         model: Claude model to use
 
     Returns:
-        PRD object
+        Tuple of (PRD object, path to PRD file)
     """
     logger.info(f"Reading spec file: {spec_path}")
 
@@ -209,10 +213,14 @@ def convert_spec_to_prd(
     with open(spec_path, "r", encoding="utf-8") as f:
         spec_content = f.read()
 
-    # Build prompt - Claude will explore the project itself
+    # Get list of existing PRD files before execution
+    existing_prds = set(prd_dir.prds_dir.glob("*.json"))
+
+    # Build prompt - Claude will explore the project and write PRD to file
     prompt = CONVERSION_PROMPT.format(
         spec_content=spec_content,
-        project_name=project_name
+        project_name=project_name,
+        prds_dir=prd_dir.prds_dir
     )
 
     # Create log file for Claude's stream output
@@ -222,13 +230,14 @@ def convert_spec_to_prd(
 
     logger.info(f"Calling Claude ({model}) to analyze project and generate PRD...")
     logger.info("Claude will explore project structure using its tools...")
+    logger.info(f"PRD will be saved to: {prd_dir.prds_dir}")
     logger.info(f"Stream output saved to: {stream_log_path}")
     logger.log_separator()
 
-    # Execute Claude with tools enabled for project exploration
+    # Execute Claude with tools enabled for project exploration and file writing
     cli = ClaudeCLI(
         output_timeout_minutes=config.timeout_minutes,
-        allowed_tools=["Read", "Glob", "Grep", "Bash(ls *)", "Bash(cat *)"],
+        allowed_tools=["Read", "Write", "Glob", "Grep", "Bash(ls *)"],
         model=model
     )
 
@@ -252,43 +261,47 @@ def convert_spec_to_prd(
     if not result.success:
         if result.timeout:
             raise RuntimeError(f"Claude timed out: {result.timeout_reason}")
-        raise RuntimeError(f"Claude execution failed: {result.output}")
+        raise RuntimeError(f"Claude execution failed. See log: {stream_log_path}")
 
     logger.info(f"Claude execution completed in {result.duration_seconds:.1f}s")
 
-    # Extract JSON from output
-    try:
-        prd_data = extract_json_from_output(result.output)
-    except ValueError as e:
-        logger.error(f"Failed to parse Claude output: {e}")
+    # Find newly created PRD file
+    current_prds = set(prd_dir.prds_dir.glob("*.json"))
+    new_prds = current_prds - existing_prds
+
+    if not new_prds:
+        logger.error("Claude did not create a PRD file")
         logger.error(f"See full output in: {stream_log_path}")
+        raise RuntimeError("No PRD file was created by Claude")
+
+    # Use the newest file if multiple were created
+    prd_path = max(new_prds, key=lambda p: p.stat().st_mtime)
+    logger.info(f"PRD file created: {prd_path.name}")
+
+    # Load and validate PRD
+    try:
+        prd = PRD.load(prd_path)
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in PRD file: {e}")
+        logger.error(f"PRD file: {prd_path}")
+        raise
+    except KeyError as e:
+        logger.error(f"Missing required field in PRD: {e}")
+        logger.error(f"PRD file: {prd_path}")
         raise
 
-    # Validate required fields
-    required_fields = ["project", "userStories"]
-    missing_fields = [f for f in required_fields if f not in prd_data]
-    if missing_fields:
-        logger.error(f"Missing required fields in PRD: {missing_fields}")
-        logger.error(f"Parsed JSON keys: {list(prd_data.keys())}")
-        logger.error(f"See full output in: {stream_log_path}")
-        raise ValueError(f"Missing required fields: {missing_fields}")
-
-    # Add source spec info
-    prd_data["source_spec"] = str(spec_path)
-    prd_data["created_at"] = datetime.now().isoformat()
-    prd_data["updated_at"] = datetime.now().isoformat()
-
-    # Create PRD object
-    try:
+    # Add source spec info if not present
+    prd_data = prd.to_dict()
+    if not prd_data.get("source_spec"):
+        prd_data["source_spec"] = str(spec_path)
+        prd_data["created_at"] = datetime.now().isoformat()
+        prd_data["updated_at"] = datetime.now().isoformat()
         prd = PRD.from_dict(prd_data)
-    except Exception as e:
-        logger.error(f"Failed to create PRD object: {e}")
-        logger.error(f"PRD data: {json.dumps(prd_data, indent=2, default=str)[:1000]}")
-        raise
+        prd.save(prd_path)
 
     logger.success(f"PRD created with {len(prd.userStories)} user stories")
 
-    return prd
+    return prd, prd_path
 
 
 def main():
@@ -301,14 +314,15 @@ def main():
         print("Usage: spec-to-prd <SPEC_FILE> [OPTIONS]")
         return 1
 
-    spec_path = Path(args.spec_file)
+    # Project root is current working directory
+    project_root = Path.cwd().resolve()
+
+    # Resolve spec path relative to current directory
+    spec_path = Path(args.spec_file).resolve()
+
     if not spec_path.exists():
         print(f"Error: Spec file not found: {spec_path}")
         return 1
-
-    # Determine project root (from env var or current directory)
-    # PRD_LOOP_WORKDIR is set by the wrapper script to preserve original cwd
-    project_root = Path(os.environ.get("PRD_LOOP_WORKDIR", ".")).resolve()
 
     # Initialize .prd directory (auto-detect and create if needed)
     prd_dir = PrdDir(project_root)
@@ -336,16 +350,9 @@ def main():
     project_name = args.project or infer_project_name(spec_path)
     logger.info(f"Project name: {project_name}")
 
-    # Determine output path
-    if args.output:
-        output_path = Path(args.output)
-    else:
-        output_name = spec_path.stem.lower().replace(" ", "-") + ".json"
-        output_path = prd_dir.prds_dir / output_name
-
     try:
-        # Convert spec to PRD
-        prd = convert_spec_to_prd(
+        # Convert spec to PRD (Claude will create the file)
+        prd, prd_path = convert_spec_to_prd(
             spec_path=spec_path,
             project_name=project_name,
             prd_dir=prd_dir,
@@ -354,9 +361,17 @@ def main():
             model=args.model
         )
 
-        # Save PRD
-        prd.save(output_path)
-        logger.success(f"PRD saved to: {output_path}")
+        # If user specified output path, move the file
+        if args.output:
+            output_path = Path(args.output)
+            if not output_path.is_absolute():
+                output_path = project_root / output_path
+            import shutil
+            shutil.move(str(prd_path), str(output_path))
+            prd_path = output_path
+            logger.info(f"PRD moved to: {output_path}")
+
+        logger.success(f"PRD saved to: {prd_path}")
 
         # Copy spec to specs directory
         spec_dest = prd_dir.specs_dir / spec_path.name
@@ -380,7 +395,7 @@ def main():
                 logger.info(f"         Notes: {story.notes}")
         logger.info("")
         logger.info("Next steps:")
-        logger.info(f"  impl-prd --prd {output_path}")
+        logger.info(f"  impl-prd --prd {prd_path}")
 
         return 0
 
