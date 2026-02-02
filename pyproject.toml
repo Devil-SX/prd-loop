@@ -1,0 +1,18 @@
+[project]
+name = "prd-loop"
+version = "0.1.0"
+description = "Python implementation of Ralph autonomous development loop"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prd_loop"]
+
+[project.scripts]
+spec-to-prd = "prd_loop.spec_to_prd:main"
+impl-prd = "prd_loop.impl_prd:main"
