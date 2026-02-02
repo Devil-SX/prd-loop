@@ -377,15 +377,7 @@ class ImplementationLoop:
         # Get final stats
         done, total = self.prd.get_progress()
 
-        # Finalize session logger (writes summary.json)
-        self.logger.finalize(
-            exit_reason=self.exit_reason,
-            total_api_calls=self.state.total_api_calls,
-            stories_completed=done,
-            total_stories=total,
-            prd_file=str(self.prd_path)
-        )
-
+        # Log completion status before finalizing (finalize closes log file)
         if self.prd.is_complete():
             self.logger.success("All stories implemented!")
         else:
@@ -393,6 +385,15 @@ class ImplementationLoop:
             self.logger.warn(f"Remaining stories: {len(remaining)}")
             for s in remaining[:5]:
                 self.logger.warn(f"  - {s.id}: {s.title}")
+
+        # Finalize session logger (writes summary.json and closes log file)
+        self.logger.finalize(
+            exit_reason=self.exit_reason,
+            total_api_calls=self.state.total_api_calls,
+            stories_completed=done,
+            total_stories=total,
+            prd_file=str(self.prd_path)
+        )
 
 
 def show_status(project: PrdProject) -> int:

@@ -1,4 +1,4 @@
-# PRD Loop
+# Ralph-Loop
 
 Python 实现的 Ralph 自主开发循环系统。将 spec 文档转换为 PRD，然后自动循环调用 Claude Code 实现所有 user stories。
 
