@@ -35,7 +35,13 @@ class PrdLogger:
         "STATS": Colors.CYAN,
     }
 
-    def __init__(self, log_file: Optional[Path] = None, enable_colors: bool = True):
+    def __init__(
+        self,
+        log_file: Optional[Path] = None,
+        log_dir: Optional[Path] = None,
+        prefix: str = "",
+        enable_colors: bool = True
+    ):
         self.log_file = log_file
         self.file_handle: Optional[TextIO] = None
         self.timers: Dict[str, float] = {}
@@ -175,3 +181,7 @@ class PrdLogger:
         if self.file_handle:
             self.file_handle.write(line + "\n")
             self.file_handle.flush()
+
+    def separator(self, char: str = "=", width: int = 60) -> None:
+        """Alias for log_separator."""
+        self.log_separator(char, width)

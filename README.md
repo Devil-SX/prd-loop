@@ -127,8 +127,61 @@ your-project/
     ├── specs/          # 原始 spec markdown 文件（自动复制）
     ├── prds/           # 生成的 PRD JSON 文件
     ├── logs/           # 执行日志
+    │   └── session_YYYYMMDD_HHMMSS/  # 每次运行的会话目录
+    │       ├── config.json           # 运行配置快照
+    │       ├── prd_snapshot.json     # PRD 开始时快照
+    │       ├── args.json             # 命令行参数
+    │       ├── session.log           # 主日志
+    │       ├── loop_001.log          # 第 1 次循环的流式输出
+    │       ├── loop_002.log          # 第 2 次循环的流式输出
+    │       ├── ...
+    │       └── summary.json          # 运行汇总报告
     ├── config.json     # 项目配置
     └── state.json      # 运行状态（用于恢复）
+```
+
+### 会话日志说明
+
+每次运行 `impl-prd` 都会创建一个独立的会话目录，包含：
+
+| 文件 | 说明 |
+|------|------|
+| `config.json` | 运行时的完整配置 |
+| `prd_snapshot.json` | PRD 在运行开始时的状态 |
+| `args.json` | 命令行参数 |
+| `session.log` | 主日志文件 |
+| `loop_NNN.log` | 每次循环的 Claude 流式输出 |
+| `summary.json` | 运行汇总，包含每次循环的耗时统计 |
+
+### summary.json 示例
+
+```json
+{
+  "session_id": "20260202_143000",
+  "start_time": "2026-02-02T14:30:00",
+  "end_time": "2026-02-02T15:45:00",
+  "total_duration_seconds": 4500.0,
+  "exit_reason": "complete",
+  "project": "MyProject",
+  "total_stories": 5,
+  "stories_completed": 5,
+  "stories_completed_this_session": 3,
+  "total_loops": 4,
+  "successful_loops": 3,
+  "failed_loops": 1,
+  "total_api_calls": 4,
+  "total_api_time_seconds": 3600.0,
+  "avg_loop_duration_seconds": 1125.0,
+  "loops": [
+    {
+      "loop_num": 1,
+      "story_id": "US-001",
+      "duration_seconds": 1200.0,
+      "success": true,
+      "story_passed": true
+    }
+  ]
+}
 ```
 
 ### config.json 配置项

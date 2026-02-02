@@ -9,6 +9,7 @@ Options:
     --prd FILE          Specify PRD file (default: latest in .prd/prds/)
     --max-iterations N  Maximum loop iterations (default: 50)
     --timeout MINUTES   Claude timeout in minutes (default: 15)
+    --model MODEL       Claude model: opus/sonnet/haiku (default: sonnet)
     --resume            Resume from last state
     --status            Show current status and exit
     --reset             Reset state and start fresh
@@ -30,7 +31,7 @@ if str(_SCRIPT_DIR) not in sys.path:
 from config import PrdProject, find_project_root, Config
 from prd_schema import PRD, LoopState
 from claude_cli import ClaudeCLI, check_claude_installed
-from logger import PrdLogger
+from session_logger import SessionLogger
 from response_analyzer import ResponseAnalyzer, detect_story_completion
 from circuit_breaker import SimpleCircuitBreaker
 from rate_limiter import RateLimiter
@@ -140,8 +141,10 @@ class ImplementationLoop:
         self,
         project: PrdProject,
         prd: PRD,
+        prd_path: Path,
         config: Config,
-        logger: PrdLogger,
+        logger: SessionLogger,
+        args: argparse.Namespace,
         max_iterations: int = 50,
         timeout_minutes: int = 15,
         no_progress_threshold: int = 3,
@@ -149,9 +152,12 @@ class ImplementationLoop:
     ):
         self.project = project
         self.prd = prd
+        self.prd_path = prd_path
         self.config = config
         self.logger = logger
+        self.args = args
         self.max_iterations = max_iterations
+        self.model = model
 
         # Initialize components
         self.cli = ClaudeCLI(
@@ -186,8 +192,14 @@ class ImplementationLoop:
         Returns:
             True if all stories completed, False otherwise
         """
+        # Save session start info
+        self.logger.save_config(self.config)
+        self.logger.save_prd_snapshot(self.prd)
+        self.logger.save_run_args(self.args)
+
         self.logger.separator()
         self.logger.info(f"impl-prd: Implementing {self.prd.project}")
+        self.logger.info(f"Model: {self.model}")
         self.logger.separator()
 
         # Show initial status
@@ -197,11 +209,12 @@ class ImplementationLoop:
 
         if self.prd.is_complete():
             self.logger.success("All stories already complete!")
+            self._finalize()
             return True
 
         # Update state
         self.state.status = "running"
-        self.state.current_prd = str(self.project.prds_dir / f"{self.prd.project}.json")
+        self.state.current_prd = str(self.prd_path)
         self.project.save_state(self.state)
 
         # Main loop
@@ -209,9 +222,6 @@ class ImplementationLoop:
         while self.running and iteration < self.max_iterations:
             iteration += 1
             self.state.loop_count = iteration
-
-            # Start loop logging
-            self.logger.start_loop(iteration)
 
             # Check rate limit
             if not self.rate_limiter.can_call():
@@ -235,7 +245,13 @@ class ImplementationLoop:
                 break
 
             self.state.current_story_id = story.id
-            self.logger.info(f"Working on: {story.id} - {story.title}")
+
+            # Start loop with session logger (creates loop-specific log file)
+            loop_log_path = self.logger.start_loop(
+                loop_num=iteration,
+                story_id=story.id,
+                story_title=story.title
+            )
 
             # Build prompt
             prompt = self._build_prompt(story)
@@ -244,12 +260,11 @@ class ImplementationLoop:
             self.logger.info("Executing Claude...")
             self.logger.start_timer("claude")
 
-            # Open log file for raw output
-            log_path = self.project.logs_dir / f"claude_{iteration}_{datetime.now().strftime('%H%M%S')}.log"
-            with open(log_path, "w", encoding="utf-8") as log_file:
-                result = self.cli.execute(prompt, log_file=log_file)
+            # Get the loop log file for stream output
+            loop_log_file = self.logger.get_loop_log_file()
+            result = self.cli.execute(prompt, log_file=loop_log_file)
 
-            duration = self.logger.stop_timer("claude")
+            api_duration = self.logger.stop_timer("claude")
             self.rate_limiter.record_call()
             self.state.total_api_calls += 1
 
@@ -257,25 +272,41 @@ class ImplementationLoop:
             if result.timeout:
                 self.logger.error(f"Timeout: {result.timeout_reason}")
                 self.circuit_breaker.record_failure("timeout")
-                self.logger.end_loop(success=False)
+                self.logger.end_loop(
+                    success=False,
+                    timeout=True,
+                    error=result.timeout_reason,
+                    api_duration=api_duration
+                )
                 continue
 
             # Handle failure
             if not result.success:
                 self.logger.error(f"Claude execution failed (exit code {result.exit_code})")
                 self.circuit_breaker.record_failure(f"exit_code_{result.exit_code}")
-                self.logger.end_loop(success=False)
+                self.logger.end_loop(
+                    success=False,
+                    error=f"exit_code_{result.exit_code}",
+                    api_duration=api_duration
+                )
                 continue
 
             # Analyze response
             analysis = self.analyzer.analyze(result.output)
+            story_passed = False
 
             # Check for project completion
             if analysis.is_complete:
                 self.logger.success("Project complete signal detected!")
                 self.exit_reason = "complete"
                 self.prd.mark_story_complete(story.id)
-                self.prd.save(self.project.prds_dir / f"{Path(self.state.current_prd).stem}.json")
+                self.prd.save(self.prd_path)
+                story_passed = True
+                self.logger.end_loop(
+                    success=True,
+                    story_passed=True,
+                    api_duration=api_duration
+                )
                 break
 
             # Check if story passed
@@ -283,17 +314,20 @@ class ImplementationLoop:
                 self.logger.success(f"Story {story.id} completed!")
                 self.prd.mark_story_complete(story.id)
                 self.circuit_breaker.record_success()
+                story_passed = True
 
                 # Save PRD
-                prd_path = self.project.get_latest_prd()
-                if prd_path:
-                    self.prd.save(prd_path)
+                self.prd.save(self.prd_path)
             else:
                 # No story completion detected - record as failure for circuit breaker
                 self.circuit_breaker.record_failure("no_progress")
 
             # End loop
-            loop_duration = self.logger.end_loop(success=True)
+            self.logger.end_loop(
+                success=True,
+                story_passed=story_passed,
+                api_duration=api_duration
+            )
 
             # Log stats
             done, total = self.prd.get_progress()
@@ -355,20 +389,22 @@ class ImplementationLoop:
             self.state.status = "failed"
         else:
             self.state.status = "stopped"
+            if not self.exit_reason:
+                self.exit_reason = "max_iterations"
 
         self.project.save_state(self.state)
 
-        # Final summary
-        self.logger.separator()
+        # Get final stats
         done, total = self.prd.get_progress()
-        runtime = self.logger.get_runtime_summary()
 
-        self.logger.info("Implementation Loop Complete")
-        self.logger.info(f"  Exit reason: {self.exit_reason or 'max_iterations'}")
-        self.logger.info(f"  Iterations: {self.state.loop_count}")
-        self.logger.info(f"  API calls: {self.state.total_api_calls}")
-        self.logger.info(f"  Stories: {done}/{total} complete")
-        self.logger.info(f"  Runtime: {runtime['total_runtime_seconds']:.1f}s")
+        # Finalize session logger (writes summary.json)
+        self.logger.finalize(
+            exit_reason=self.exit_reason,
+            total_api_calls=self.state.total_api_calls,
+            stories_completed=done,
+            total_stories=total,
+            prd_file=str(self.prd_path)
+        )
 
         if self.prd.is_complete():
             self.logger.success("All stories implemented!")
@@ -379,8 +415,11 @@ class ImplementationLoop:
                 self.logger.warn(f"  - {s.id}: {s.title}")
 
 
-def show_status(project: PrdProject, logger: PrdLogger) -> int:
+def show_status(project: PrdProject) -> int:
     """Show current status and exit."""
+    from logger import PrdLogger
+    logger = PrdLogger()
+
     state = project.load_state()
 
     logger.separator()
@@ -414,20 +453,19 @@ def main():
     project_root = find_project_root()
     if not project_root:
         print("Error: .prd directory not found")
-        print("Run 'spec-to-prd --init' first")
+        print("Run 'spec-to-prd <spec.md>' first")
         return 1
 
     project = PrdProject(project_root)
 
-    # Initialize logger
-    logger = PrdLogger(log_dir=project.logs_dir, prefix="impl_prd")
-
-    # Handle --status
+    # Handle --status (uses simple logger)
     if args.status:
-        return show_status(project, logger)
+        return show_status(project)
 
     # Handle --reset
     if args.reset:
+        from logger import PrdLogger
+        logger = PrdLogger()
         logger.info("Resetting state...")
         LoopState().save(project.state_file)
         logger.success("State reset complete")
@@ -435,8 +473,8 @@ def main():
 
     # Check Claude CLI
     if not check_claude_installed():
-        logger.error("Claude Code CLI not found")
-        logger.info("Install with: npm install -g @anthropic-ai/claude-code")
+        print("Error: Claude Code CLI not found")
+        print("Install with: npm install -g @anthropic-ai/claude-code")
         return 1
 
     # Load config
@@ -456,37 +494,41 @@ def main():
         if not prd_path.exists():
             prd_path = project.prds_dir / args.prd
         if not prd_path.exists():
-            logger.error(f"PRD file not found: {args.prd}")
+            print(f"Error: PRD file not found: {args.prd}")
             return 1
     else:
         prd_path = project.get_latest_prd()
         if not prd_path:
-            logger.error("No PRD files found in .prd/prds/")
-            logger.info("Run 'spec-to-prd' first to generate PRD files")
+            print("Error: No PRD files found in .prd/prds/")
+            print("Run 'spec-to-prd' first to generate PRD files")
             return 1
 
     # Load PRD
     try:
         prd = PRD.load(prd_path)
     except Exception as e:
-        logger.error(f"Failed to load PRD: {e}")
+        print(f"Error: Failed to load PRD: {e}")
         return 1
-
-    logger.info(f"Loaded PRD: {prd_path.name}")
 
     # Check for resume
     state = project.load_state()
     if not args.resume and state.loop_count > 0 and state.status in ("running", "paused"):
-        logger.warn(f"Previous run detected (loop #{state.loop_count}, status: {state.status})")
-        logger.info("Use --resume to continue or --reset to start fresh")
+        print(f"Warning: Previous run detected (loop #{state.loop_count}, status: {state.status})")
+        print("Use --resume to continue or --reset to start fresh")
         return 1
+
+    # Initialize session logger
+    logger = SessionLogger(logs_dir=project.logs_dir)
+    logger.info(f"Loaded PRD: {prd_path.name}")
 
     # Create and run loop
     loop = ImplementationLoop(
         project=project,
         prd=prd,
+        prd_path=prd_path,
         config=config,
         logger=logger,
+        args=args,
         max_iterations=config.max_iterations,
         timeout_minutes=config.timeout_minutes,
         no_progress_threshold=config.no_progress_threshold,
