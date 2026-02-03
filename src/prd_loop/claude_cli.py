@@ -30,11 +30,11 @@ class ClaudeCLI:
     and timeout detection when no output is received for too long.
     """
 
-    # Model name mapping
+    # Model name mapping (Claude CLI supports short names directly)
     MODEL_MAP = {
-        "opus": "claude-opus-4-5-20251101",
-        "sonnet": "claude-sonnet-4-20250514",
-        "haiku": "claude-haiku-3-5-20241022",
+        "opus": "opus",
+        "sonnet": "sonnet",
+        "haiku": "haiku",
     }
 
     def __init__(
