@@ -219,7 +219,10 @@ def run_observe(session_dir: Path, create_issue: bool = True, model: str = "haik
 
     print(f"\nAnalyzing with Claude ({model})...\n")
 
-    result = cli.execute(prompt)
+    # Open log file for stream output
+    observe_log_path = session_dir / "observe.log"
+    with open(observe_log_path, "w", encoding="utf-8") as log_file:
+        result = cli.execute(prompt, log_file=log_file)
 
     if result.timeout:
         print(f"\nError: Analysis timed out ({result.timeout_reason})")
