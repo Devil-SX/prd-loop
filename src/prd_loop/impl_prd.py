@@ -126,6 +126,11 @@ def parse_args():
         action="store_true",
         help="Show detailed output",
     )
+    parser.add_argument(
+        "--no-observe",
+        action="store_true",
+        help="Don't run observe-impl after completion",
+    )
     return parser.parse_args()
 
 
@@ -429,6 +434,7 @@ def show_status(project: PrdProject) -> int:
 
 def main():
     args = parse_args()
+    session_dir = None  # Track session directory for observe-impl
 
     # Find project
     project_root = find_project_root()
@@ -500,24 +506,41 @@ def main():
 
     # Initialize session logger
     logger = SessionLogger(logs_dir=project.logs_dir)
+    session_dir = logger.session_dir  # Save for observe-impl
     logger.info(f"Loaded PRD: {prd_path.name}")
 
-    # Create and run loop
-    loop = ImplementationLoop(
-        project=project,
-        prd=prd,
-        prd_path=prd_path,
-        config=config,
-        logger=logger,
-        args=args,
-        max_iterations=config.max_iterations,
-        timeout_minutes=config.timeout_minutes,
-        no_progress_threshold=config.no_progress_threshold,
-        model=args.model,
-    )
+    try:
+        # Create and run loop
+        loop = ImplementationLoop(
+            project=project,
+            prd=prd,
+            prd_path=prd_path,
+            config=config,
+            logger=logger,
+            args=args,
+            max_iterations=config.max_iterations,
+            timeout_minutes=config.timeout_minutes,
+            no_progress_threshold=config.no_progress_threshold,
+            model=args.model,
+        )
 
-    success = loop.run()
-    return 0 if success else 1
+        success = loop.run()
+        return 0 if success else 1
+
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+    finally:
+        # Run observe-impl after completion (unless disabled)
+        if not args.no_observe and session_dir and session_dir.exists():
+            try:
+                from observe_impl import run_observe
+                run_observe(session_dir, create_issue=True, model="haiku")
+            except Exception as e:
+                print(f"Warning: observe-impl failed: {e}")
 
 
 if __name__ == "__main__":

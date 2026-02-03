@@ -35,6 +35,11 @@ if [[ -f "$INSTALL_DIR/impl-prd" ]]; then
     log "INFO" "Removed $INSTALL_DIR/impl-prd"
 fi
 
+if [[ -f "$INSTALL_DIR/observe-impl" ]]; then
+    rm -f "$INSTALL_DIR/observe-impl"
+    log "INFO" "Removed $INSTALL_DIR/observe-impl"
+fi
+
 log "SUCCESS" "PRD Loop uninstalled successfully!"
 echo ""
 echo "Note: The project directory and uv environment are preserved."
