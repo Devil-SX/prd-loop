@@ -10,12 +10,30 @@ Python 实现的 Ralph 自主开发循环系统。将 spec 文档转换为 PRD�
 ./install.sh
 ```
 
-安装后会在 `~/.local/bin/` 创建 `spec-to-prd` 和 `impl-prd` 两个命令。
+安装后会在 `~/.local/bin/` 创建以下命令。
 
 ## 卸载
 
 ```bash
 ./uninstall.sh
+```
+
+---
+
+## 命令概览
+
+| 命令 | 说明 |
+|------|------|
+| `spec-to-prd` | 将 spec markdown 转换为 PRD JSON，自动分析项目结构 |
+| `impl-prd` | 自主循环实现 PRD 中的 user stories |
+| `observe-impl` | 分析 impl-prd 的执行日志，生成报告并推送 GitHub Issue |
+
+典型工作流：
+
+```bash
+spec-to-prd my-feature.md    # 1. 转换 spec 为 PRD
+impl-prd                      # 2. 自主实现（结束后自动调用 observe-impl）
+observe-impl --latest         # 3. 或手动分析最新的 session
 ```
 
 ---
@@ -104,9 +122,12 @@ impl-prd [OPTIONS]
 | `--status` | 显示当前状态后退出 |
 | `--reset` | 重置状态，重新开始 |
 | `--verbose` | 显示详细输出 |
+| `--no-observe` | 结束后不自动运行 observe-impl |
 | `--help` | 显示帮助信息 |
 
-> **注意**: impl-prd 默认使用 `--dangerously-skip-permissions` 模式运行，以实现完全自主执行。
+> **注意**:
+> - impl-prd 默认使用 `--dangerously-skip-permissions` 模式运行，以实现完全自主执行。
+> - 默认在结束时自动调用 `observe-impl` 分析日志，使用 `--no-observe` 禁用。
 
 #### 使用示例
 
@@ -134,6 +155,84 @@ impl-prd --reset
 
 # 连续 5 次无进展后停止
 impl-prd --no-progress-threshold 5
+
+# 禁用自动观察分析
+impl-prd --no-observe
+```
+
+---
+
+### observe-impl
+
+分析 impl-prd 的执行日志，总结遇到的问题，生成报告并可选推送到 GitHub Issue。
+
+```bash
+observe-impl [OPTIONS]
+```
+
+#### 功能
+
+1. **读取 session 日志目录**：summary.json、session.log、loop_*.log
+2. **调用 Claude 分析日志**：识别错误、警告、失败原因，总结问题和建议
+3. **保存报告**：生成 `{session_dir}/observation_report.md`
+4. **推送 GitHub Issue**：如果发现显著问题，自动创建 Issue 到 `Devil-SX/prd-loop`
+
+#### 参数
+
+| 参数 | 简写 | 说明 |
+|------|------|------|
+| `--session PATH` | `-s` | 指定 session 目录路径 |
+| `--latest` | `-l` | 分析最新的 session |
+| `--no-issue` | - | 不创建 GitHub Issue |
+| `--model MODEL` | `-m` | Claude 模型: opus/sonnet/haiku（默认: haiku） |
+| `--timeout MINUTES` | - | Claude 超时时间，单位分钟（默认: 10） |
+| `--verbose` | `-v` | 显示详细输出 |
+| `--help` | `-h` | 显示帮助信息 |
+
+#### 使用示例
+
+```bash
+# 分析最新的 session
+observe-impl --latest
+
+# 分析指定的 session 目录
+observe-impl --session .prd/logs/session_20260202_215548
+
+# 只生成报告，不创建 GitHub Issue
+observe-impl --latest --no-issue
+
+# 使用 sonnet 模型进行更深入的分析
+observe-impl --latest -m sonnet
+```
+
+#### 生成的报告格式
+
+```markdown
+# Implementation Session Report
+
+## Summary
+- **Session ID**: 20260202_215548
+- **Duration**: 1h 15m
+- **Stories Progress**: 3/5 completed (2 this session)
+- **Loop Results**: 4 successful, 1 failed
+- **Exit Reason**: circuit_breaker
+
+## Issues Found
+
+### Issue 1: Type check failure in user service
+- **Loop(s)**: #3, #4
+- **Story**: US-002
+- **Problem**: Missing type annotation for return value
+- **Root Cause**: Function signature incomplete
+- **Suggestion**: Add explicit return type annotation
+
+## What Went Well
+- US-001 completed successfully on first attempt
+- All tests passed for implemented features
+
+## Recommendations
+- Consider adding pre-commit hooks for type checking
+- ...
 ```
 
 ---
@@ -156,7 +255,8 @@ your-project/
     │       ├── loop_001.log          # 第 1 次循环的流式输出
     │       ├── loop_002.log          # 第 2 次循环的流式输出
     │       ├── ...
-    │       └── summary.json          # 运行汇总报告
+    │       ├── summary.json          # 运行汇总报告
+    │       └── observation_report.md # observe-impl 生成的分析报告
     ├── config.json     # 项目配置
     └── state.json      # 运行状态（用于恢复）
 ```
@@ -173,6 +273,7 @@ your-project/
 | `session.log` | 主日志文件 |
 | `loop_NNN.log` | 每次循环的 Claude 流式输出 |
 | `summary.json` | 运行汇总，包含每次循环的耗时统计 |
+| `observation_report.md` | observe-impl 生成的问题分析报告 |
 
 ### summary.json 示例
 
@@ -263,7 +364,7 @@ EOF
 # 3. 转换 spec 为 PRD（自动初始化 .prd 目录）
 spec-to-prd my-feature.md
 
-# 4. 开始自主实现循环
+# 4. 开始自主实现循环（结束后自动分析日志）
 impl-prd
 ```
 
