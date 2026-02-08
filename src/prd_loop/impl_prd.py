@@ -34,42 +34,7 @@ from claude_cli import ClaudeCLI, check_claude_installed
 from session_logger import SessionLogger
 from circuit_breaker import SimpleCircuitBreaker
 from rate_limiter import RateLimiter
-
-
-# Prompt template for implementing a user story
-IMPLEMENTATION_PROMPT = '''You are an autonomous coding agent implementing a PRD.
-
-## Project: {project_name}
-{project_description}
-
-## Current Story: {story_id} - {story_title}
-{story_description}
-
-### Acceptance Criteria:
-{acceptance_criteria}
-
-## Instructions:
-1. Implement this single user story completely
-2. Run quality checks (typecheck, lint, test as applicable)
-3. If checks pass, commit ALL changes with message: `feat: {story_id} - {story_title}`
-4. **IMPORTANT**: After completing this story, update the PRD file to mark it as passed
-
-## PRD File Location:
-{prd_path}
-
-## How to Mark Story Complete:
-When you have successfully implemented and tested this story, use the Edit tool to update the PRD file:
-- Find the story with id "{story_id}"
-- Change `"passes": false` to `"passes": true`
-- Add `"completed_at": "<current ISO timestamp>"`
-
-## Important:
-- Focus on THIS story only
-- Make minimal, focused changes
-- Follow existing code patterns
-- Keep commits atomic
-- Always update the PRD file when the story is complete
-'''
+from prompt.implementation import IMPLEMENTATION_PROMPT
 
 
 def parse_args():
