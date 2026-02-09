@@ -3,6 +3,6 @@ revision = 3
 requires-python = ">=3.8"
 
 [[package]]
-name = "prd-loop"
+name = "eva-01"
 version = "0.1.0"
 source = { editable = "." }

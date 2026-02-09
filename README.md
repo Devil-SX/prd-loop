@@ -1,40 +1,91 @@
-# Ralph-Loop
+<h1 align="center">EVA-01</h1>
 
-Python 实现的 Ralph 自主开发循环系统。将 spec 文档转换为 PRD，然后自动循环调用 Claude Code 实现所有 user stories。
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/Python-1890_lines-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Shell-248_lines-4EAA25?logo=gnubash&logoColor=white" alt="Shell">
+  <img src="https://img.shields.io/badge/Markdown-24_lines-000000?logo=markdown&logoColor=white" alt="Markdown">
+</p>
 
-![Ralph](./Ralph.png)
+<p align="center">
+  <b><a href="./README.md">中文</a></b> | <a href="./README_EN.md">English</a>
+</p>
 
-## 安装
+<p align="center">
+  <img src="./eva.png" width="400" alt="EVA-01">
+</p>
 
-```bash
-./install.sh
-```
-
-安装后会在 `~/.local/bin/` 创建以下命令。
-
-## 卸载
-
-```bash
-./uninstall.sh
-```
+自动化生活的测试平台原型机。将需求文档（spec）转换为结构化的 PRD，再由 Claude Code 自主循环实现所有 user stories。目标是在 AI 快速发展的时代，探索人类与 AI 高效协作的方式。
 
 ---
 
-## 命令概览
+## 设计哲学
+
+### 算力杠杆与人类瓶颈
+
+人可调度的 AI 算力越多，个人能力边界越大——这就是**算力杠杆**。但 AI 每次运行都需要人参与决策和审查，人的精力是有限的——这就是**人类瓶颈**。
+
+用三个变量描述：
+
+- $v$ — 单位 AI 运行时间的平均交互次数
+- $T$ — 一天的 AI 总运行时间（算力杠杆）
+- $X = vT$ — 一天的人机交互总次数，受上限 $X_{\text{threshold}}$ 约束
+
+目标很明确：**最大化 $T$，最小化 $X$，核心是压低 $v$。**
+
+$v$ 的高低决定了两种截然不同的工作状态：
+
+| 模式 | 特征 | 每小时交互次数 $v$ | 算力杠杆 $T$（$X$=50） |
+|------|------|:---:|:---:|
+| 疲劳模式 | 交互次数逼近精力上限，人被 AI 绑架 | 10 | 5h |
+| | | 5 | 10h |
+| 舒适模式 | 交互远低于上限，人享受 AI 红利 | 1 | 50h |
+| | | 0.5 | 100h |
+
+**结论：$v$ 需要压到每小时 1 次以下，才能让算力杠杆足够大且人不疲劳。**
+
+### 降低 $v$ 的三条路径
+
+1. **更聪明（Smarter）** — 减少返工，降低交互次数
+   - 先验：规范化流程，每次改动必须过测试，AI 自检测试是否真正覆盖
+   - 后验：运行问题自动记录反馈，持续学习外部案例和框架
+
+2. **批处理（Batching）** — 集中交互，降低离散开销
+   - 大规模批量运行任务，统一审查结果
+   - 在 spec 阶段用 AI 辅助打磨需求，减少运行中的意外中断
+
+3. **降负担（Simplify）** — 让每次交互更轻松
+   - 自动生成结构化报告，清晰的入口和操作路径
+
+### 辐射效应
+
+EVA-01 是一个**实验平台**，而非封闭工具。这里沉淀的方法论——spec 驱动、自主循环、观测反馈——不局限于本仓库，可以辐射到任何需要 AI 自动化的项目中。EVA-01 验证 workflow，其他仓库复用 workflow。
+
+---
+
+## 快速开始
+
+```bash
+# 安装
+./install.sh
+
+# 进入你的项目
+cd your-project
+
+# 写一个需求文档，转换为 PRD，然后自主实现
+spec-to-prd my-feature.md
+impl-prd
+```
+
+卸载：`./uninstall.sh`
+
+安装后在 `~/.local/bin/` 创建以下命令：
 
 | 命令 | 说明 |
 |------|------|
-| `spec-to-prd` | 将 spec markdown 转换为 PRD JSON，自动分析项目结构 |
+| `spec-to-prd` | 将 spec 转换为 PRD JSON，自动分析项目结构 |
 | `impl-prd` | 自主循环实现 PRD 中的 user stories |
-| `observe-impl` | 分析 impl-prd 的执行日志，生成报告并推送 GitHub Issue |
-
-典型工作流：
-
-```bash
-spec-to-prd my-feature.md    # 1. 转换 spec 为 PRD
-impl-prd                      # 2. 自主实现（结束后自动调用 observe-impl）
-observe-impl --latest         # 3. 或手动分析最新的 session
-```
+| `observe-impl` | 分析执行日志，生成报告并推送 GitHub Issue |
 
 ---
 
@@ -42,61 +93,35 @@ observe-impl --latest         # 3. 或手动分析最新的 session
 
 ### spec-to-prd
 
-将 spec markdown 文件转换为 PRD JSON 格式。**会自动分析现有项目结构**，生成与现有代码库兼容的 PRD。
+将 spec markdown 转换为 PRD JSON。会自动分析项目结构，生成与现有代码兼容的 PRD。
 
 ```bash
 spec-to-prd <SPEC_FILE> [OPTIONS]
 ```
 
-> **注意**:
-> - 如果 `.prd` 目录不存在，会自动初始化创建
-> - 会自动分析当前目录的项目结构、配置文件、Git 信息
+自动收集的项目上下文：
 
-#### 项目上下文分析
-
-`spec-to-prd` 会自动收集以下信息并提供给 Claude：
-
-| 分析内容 | 说明 |
-|----------|------|
-| 目录结构 | 项目文件树（最深 4 层，排除 node_modules 等） |
+| 内容 | 说明 |
+|------|------|
+| 目录结构 | 文件树（最深 4 层，排除 node_modules 等） |
 | 配置文件 | package.json, pyproject.toml, tsconfig.json 等 |
 | README | 项目文档 |
 | Git 信息 | 当前分支、提交数量 |
 
-这样生成的 PRD 会：
-- 遵循现有代码风格和约定
-- 引用需要修改的现有文件
-- 考虑项目的技术栈（Node/Python/Rust 等）
-- 增量开发而非重写
-
-#### 参数
+生成的 PRD 会遵循现有代码风格，引用需修改的文件，考虑技术栈，增量开发而非重写。
 
 | 参数 | 简写 | 说明 |
 |------|------|------|
 | `SPEC_FILE` | - | Spec markdown 文件路径（必需） |
-| `--output FILE` | `-o` | 输出 PRD JSON 文件路径（默认: `.prd/prds/<name>.json`） |
+| `--output FILE` | `-o` | 输出路径（默认: `.prd/prds/<name>.json`） |
 | `--project NAME` | `-p` | 项目名称（默认: 从文件名推断） |
 | `--model MODEL` | `-m` | Claude 模型: opus/sonnet/haiku（默认: sonnet） |
-| `--timeout MINUTES` | - | Claude 超时时间，单位分钟（默认: 15） |
-| `--help` | `-h` | 显示帮助信息 |
-
-#### 使用示例
+| `--timeout MINUTES` | - | 超时分钟数（默认: 15） |
 
 ```bash
-# 转换 spec 文件为 PRD（自动分析项目结构）
-spec-to-prd my-feature.md
-
-# 使用 opus 模型（更强的上下文理解）
-spec-to-prd my-feature.md -m opus
-
-# 使用 haiku 模型（更快更便宜）
-spec-to-prd my-feature.md --model haiku
-
-# 指定输出路径和项目名称
-spec-to-prd my-feature.md -o output.json -p "My Project"
-
-# 设置超时时间为 30 分钟
-spec-to-prd my-feature.md --timeout 30
+spec-to-prd my-feature.md              # 基本用法
+spec-to-prd my-feature.md -m opus      # 用 opus 模型
+spec-to-prd my-feature.md -o out.json  # 指定输出路径
 ```
 
 ---
@@ -109,204 +134,91 @@ spec-to-prd my-feature.md --timeout 30
 impl-prd [OPTIONS]
 ```
 
-#### 参数
-
 | 参数 | 说明 |
 |------|------|
-| `--prd FILE` | 指定 PRD 文件路径（默认: `.prd/prds/` 下最新的文件） |
-| `--max-iterations N` | 最大循环迭代次数（默认: 50） |
-| `--timeout MINUTES` | Claude 输出超时时间，单位分钟（默认: 15） |
-| `--model`, `-m` | Claude 模型: opus/sonnet/haiku（默认: sonnet） |
-| `--no-progress-threshold N` | 连续无进展次数阈值，超过后停止（默认: 3） |
-| `--resume` | 从上次状态恢复继续执行 |
+| `--prd FILE` | PRD 文件路径（默认: `.prd/prds/` 下最新） |
+| `--max-iterations N` | 最大迭代次数（默认: 50） |
+| `--timeout MINUTES` | 输出超时分钟数（默认: 15） |
+| `--model`, `-m` | Claude 模型（默认: sonnet） |
+| `--no-progress-threshold N` | 连续无进展阈值（默认: 3） |
+| `--resume` | 从上次状态恢复 |
 | `--status` | 显示当前状态后退出 |
 | `--reset` | 重置状态，重新开始 |
-| `--verbose` | 显示详细输出 |
+| `--verbose` | 详细输出 |
 | `--no-observe` | 结束后不自动运行 observe-impl |
-| `--help` | 显示帮助信息 |
 
-> **注意**:
-> - impl-prd 默认使用 `--dangerously-skip-permissions` 模式运行，以实现完全自主执行。
-> - 默认在结束时自动调用 `observe-impl` 分析日志，使用 `--no-observe` 禁用。
-
-#### 使用示例
+> impl-prd 默认以 `--dangerously-skip-permissions` 运行，实现完全自主执行。结束时自动调用 `observe-impl`。
 
 ```bash
-# 使用最新的 PRD 文件开始实现
-impl-prd
-
-# 使用 opus 模型
-impl-prd -m opus
-
-# 指定 PRD 文件
-impl-prd --prd .prd/prds/my-feature.json
-
-# 设置最大迭代次数和超时
-impl-prd --max-iterations 100 --timeout 20
-
-# 查看当前状态
-impl-prd --status
-
-# 从上次中断处恢复
-impl-prd --resume
-
-# 重置状态重新开始
-impl-prd --reset
-
-# 连续 5 次无进展后停止
-impl-prd --no-progress-threshold 5
-
-# 禁用自动观察分析
-impl-prd --no-observe
+impl-prd                          # 开始实现
+impl-prd -m opus                  # 用 opus 模型
+impl-prd --resume                 # 恢复上次进度
+impl-prd --status                 # 查看当前状态
 ```
+
+#### 退出机制
+
+| 机制 | 触发条件 | 默认值 |
+|------|----------|--------|
+| 完成退出 | 所有 stories 通过 | - |
+| 最大迭代 | 达到 `--max-iterations` | 50 次 |
+| 输出超时 | Claude 无输出超过 N 分钟 | 15 分钟 |
+| 无进展断路 | 连续 N 次无 story 完成 | 3 次 |
+| 速率限制 | 超过每小时调用上限 | 100 次/小时 |
+| 用户中断 | Ctrl+C | - |
 
 ---
 
 ### observe-impl
 
-分析 impl-prd 的执行日志，总结遇到的问题，生成报告并可选推送到 GitHub Issue。
+分析 impl-prd 的执行日志，生成报告并可选推送 GitHub Issue。
 
 ```bash
 observe-impl [OPTIONS]
 ```
 
-#### 功能
-
-1. **读取 session 日志目录**：summary.json、session.log、loop_*.log
-2. **调用 Claude 分析日志**：识别错误、警告、失败原因，总结问题和建议
-3. **保存报告**：生成 `{session_dir}/observation_report.md`
-4. **推送 GitHub Issue**：如果发现显著问题，自动创建 Issue 到 `Devil-SX/prd-loop`
-
-#### 参数
+工作流程：读取 session 日志 -> Claude 分析 -> 保存报告 -> 按需创建 Issue
 
 | 参数 | 简写 | 说明 |
 |------|------|------|
-| `--session PATH` | `-s` | 指定 session 目录路径 |
-| `--latest` | `-l` | 分析最新的 session |
+| `--session PATH` | `-s` | 指定 session 目录 |
+| `--latest` | `-l` | 分析最新 session |
 | `--no-issue` | - | 不创建 GitHub Issue |
-| `--model MODEL` | `-m` | Claude 模型: opus/sonnet/haiku（默认: haiku） |
-| `--timeout MINUTES` | - | Claude 超时时间，单位分钟（默认: 10） |
-| `--verbose` | `-v` | 显示详细输出 |
-| `--help` | `-h` | 显示帮助信息 |
-
-#### 使用示例
+| `--model MODEL` | `-m` | Claude 模型（默认: haiku） |
+| `--timeout MINUTES` | - | 超时分钟数（默认: 10） |
+| `--verbose` | `-v` | 详细输出 |
 
 ```bash
-# 分析最新的 session
-observe-impl --latest
-
-# 分析指定的 session 目录
-observe-impl --session .prd/logs/session_20260202_215548
-
-# 只生成报告，不创建 GitHub Issue
-observe-impl --latest --no-issue
-
-# 使用 sonnet 模型进行更深入的分析
-observe-impl --latest -m sonnet
-```
-
-#### 生成的报告格式
-
-```markdown
-# Implementation Session Report
-
-## Summary
-- **Session ID**: 20260202_215548
-- **Duration**: 1h 15m
-- **Stories Progress**: 3/5 completed (2 this session)
-- **Loop Results**: 4 successful, 1 failed
-- **Exit Reason**: circuit_breaker
-
-## Issues Found
-
-### Issue 1: Type check failure in user service
-- **Loop(s)**: #3, #4
-- **Story**: US-002
-- **Problem**: Missing type annotation for return value
-- **Root Cause**: Function signature incomplete
-- **Suggestion**: Add explicit return type annotation
-
-## What Went Well
-- US-001 completed successfully on first attempt
-- All tests passed for implemented features
-
-## Recommendations
-- Consider adding pre-commit hooks for type checking
-- ...
+observe-impl --latest                # 分析最新 session
+observe-impl --latest --no-issue     # 只生成报告
+observe-impl --latest -m sonnet      # 用 sonnet 深入分析
 ```
 
 ---
 
 ## 目录结构
 
-首次运行 `spec-to-prd` 时会自动创建以下目录结构：
+首次运行 `spec-to-prd` 时自动创建：
 
 ```
 your-project/
 └── .prd/
-    ├── specs/          # 原始 spec markdown 文件（自动复制）
-    ├── prds/           # 生成的 PRD JSON 文件
+    ├── specs/          # 原始 spec markdown
+    ├── prds/           # 生成的 PRD JSON
     ├── logs/           # 执行日志
-    │   └── session_YYYYMMDD_HHMMSS/  # 每次运行的会话目录
+    │   └── session_YYYYMMDD_HHMMSS/
     │       ├── config.json           # 运行配置快照
-    │       ├── prd_snapshot.json     # PRD 开始时快照
+    │       ├── prd_snapshot.json     # PRD 快照
     │       ├── args.json             # 命令行参数
     │       ├── session.log           # 主日志
-    │       ├── loop_001.log          # 第 1 次循环的流式输出
-    │       ├── loop_002.log          # 第 2 次循环的流式输出
-    │       ├── ...
-    │       ├── summary.json          # 运行汇总报告
-    │       └── observation_report.md # observe-impl 生成的分析报告
+    │       ├── loop_001.log          # 每次循环的输出
+    │       ├── summary.json          # 运行汇总
+    │       └── observation_report.md # 观测报告
     ├── config.json     # 项目配置
     └── state.json      # 运行状态（用于恢复）
 ```
 
-### 会话日志说明
-
-每次运行 `impl-prd` 都会创建一个独立的会话目录，包含：
-
-| 文件 | 说明 |
-|------|------|
-| `config.json` | 运行时的完整配置 |
-| `prd_snapshot.json` | PRD 在运行开始时的状态 |
-| `args.json` | 命令行参数 |
-| `session.log` | 主日志文件 |
-| `loop_NNN.log` | 每次循环的 Claude 流式输出 |
-| `summary.json` | 运行汇总，包含每次循环的耗时统计 |
-| `observation_report.md` | observe-impl 生成的问题分析报告 |
-
-### summary.json 示例
-
-```json
-{
-  "session_id": "20260202_143000",
-  "start_time": "2026-02-02T14:30:00",
-  "end_time": "2026-02-02T15:45:00",
-  "total_duration_seconds": 4500.0,
-  "exit_reason": "complete",
-  "project": "MyProject",
-  "total_stories": 5,
-  "stories_completed": 5,
-  "stories_completed_this_session": 3,
-  "total_loops": 4,
-  "successful_loops": 3,
-  "failed_loops": 1,
-  "total_api_calls": 4,
-  "total_api_time_seconds": 3600.0,
-  "avg_loop_duration_seconds": 1125.0,
-  "loops": [
-    {
-      "loop_num": 1,
-      "story_id": "US-001",
-      "duration_seconds": 1200.0,
-      "success": true,
-      "story_passed": true
-    }
-  ]
-}
-```
-
-### config.json 配置项
+### 配置项
 
 ```json
 {
@@ -314,10 +226,7 @@ your-project/
   "max_iterations": 50,
   "timeout_minutes": 15,
   "output_format": "stream",
-  "allowed_tools": [
-    "Write", "Read", "Edit",
-    "Bash(git *)", "Bash(npm *)", "Bash(pytest)"
-  ],
+  "allowed_tools": ["Write", "Read", "Edit", "Bash(git *)", "Bash(npm *)", "Bash(pytest)"],
   "session_expiry_hours": 24,
   "max_consecutive_failures": 3,
   "no_progress_threshold": 3
@@ -327,65 +236,19 @@ your-project/
 | 配置项 | 说明 | 默认值 |
 |--------|------|--------|
 | `max_calls_per_hour` | 每小时最大 API 调用次数 | 100 |
-| `max_iterations` | 最大循环迭代次数 | 50 |
-| `timeout_minutes` | Claude 超时时间（分钟） | 15 |
-| `output_format` | 输出格式: stream 或 json | stream |
-| `allowed_tools` | 允许 Claude 使用的工具列表 | - |
+| `max_iterations` | 最大迭代次数 | 50 |
+| `timeout_minutes` | Claude 超时（分钟） | 15 |
+| `output_format` | 输出格式: stream / json | stream |
+| `allowed_tools` | 允许的工具列表 | - |
 | `session_expiry_hours` | 会话过期时间（小时） | 24 |
 | `max_consecutive_failures` | 最大连续失败次数 | 3 |
 | `no_progress_threshold` | 无进展阈值 | 3 |
 
 ---
 
-## 快速开始
+## 内部协议
 
-```bash
-# 1. 进入你的项目目录
-cd your-project
-
-# 2. 创建 spec 文件
-cat > my-feature.md << 'EOF'
-# My Feature Spec
-
-## Overview
-Add a new feature to the project.
-
-## Requirements
-1. Create hello.py that prints "Hello, World!"
-2. Add unit tests
-3. Ensure type checking passes
-
-## Acceptance Criteria
-- hello.py exists and runs correctly
-- All tests pass
-- No type errors
-EOF
-
-# 3. 转换 spec 为 PRD（自动初始化 .prd 目录）
-spec-to-prd my-feature.md
-
-# 4. 开始自主实现循环（结束后自动分析日志）
-impl-prd
-```
-
----
-
-## 退出机制
-
-impl-prd 有多种退出机制保护：
-
-| 机制 | 触发条件 | 默认值 |
-|------|----------|--------|
-| 完成退出 | 所有 stories 的 `passes` 为 true | - |
-| 最大迭代 | 达到 `--max-iterations` | 50 次 |
-| 输出超时 | Claude 超过 N 分钟无输出 | 15 分钟 |
-| 无进展断路 | 连续 N 次循环无 story 完成 | 3 次 |
-| 速率限制 | 超过每小时调用次数限制 | 100 次/小时 |
-| 用户中断 | Ctrl+C | - |
-
----
-
-## PRD JSON 格式
+### PRD JSON 格式
 
 ```json
 {
@@ -410,11 +273,9 @@ impl-prd 有多种退出机制保护：
 }
 ```
 
----
+### 完成信号
 
-## 完成信号
-
-Claude 完成 story 时应输出状态块：
+Claude 完成 story 时输出：
 
 ```
 ---RALPH_STATUS---

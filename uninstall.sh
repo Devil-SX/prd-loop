@@ -1,5 +1,5 @@
 #!/bin/bash
-# PRD Loop - Uninstall Script
+# EVA-01 - Uninstall Script
 
 set -e
 
@@ -22,7 +22,7 @@ log() {
     echo -e "${color}[$(date '+%H:%M:%S')] [$level] $message${NC}"
 }
 
-log "INFO" "Uninstalling PRD Loop..."
+log "INFO" "Uninstalling EVA-01..."
 
 # Remove command scripts
 if [[ -f "$INSTALL_DIR/spec-to-prd" ]]; then
@@ -40,7 +40,7 @@ if [[ -f "$INSTALL_DIR/observe-impl" ]]; then
     log "INFO" "Removed $INSTALL_DIR/observe-impl"
 fi
 
-log "SUCCESS" "PRD Loop uninstalled successfully!"
+log "SUCCESS" "EVA-01 uninstalled successfully!"
 echo ""
 echo "Note: The project directory and uv environment are preserved."
 echo "To fully remove, delete the project directory manually."

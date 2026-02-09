@@ -1,7 +1,7 @@
 [project]
-name = "prd-loop"
+name = "eva-01"
 version = "0.1.0"
-description = "Python implementation of Ralph autonomous development loop"
+description = "EVA-01: Automated life testing platform prototype"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = []
@@ -11,8 +11,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/prd_loop"]
+packages = ["src/eva_01"]
 
 [project.scripts]
-spec-to-prd = "prd_loop.spec_to_prd:main"
-impl-prd = "prd_loop.impl_prd:main"
+spec-to-prd = "eva_01.spec_to_prd:main"
+impl-prd = "eva_01.impl_prd:main"
