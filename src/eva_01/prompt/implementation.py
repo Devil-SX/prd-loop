@@ -61,16 +61,29 @@ If your changes altered the project structure (new modules, new directories, cha
 - If `CLAUDE.md` does not exist, create it with at minimum the architecture reference
 - Do NOT overwrite existing CLAUDE.md content
 
-### Step 7: Git Commit
+### Step 7: Git Commit & GitHub
 **Only execute this step if Step 4 (regression tests) passed with ALL tests green.**
-1. Check if git repo exists: `git rev-parse --is-inside-work-tree`
-2. If NOT a git repo:
-   - `git init`
-   - Create `.gitignore` (Python, Node, env, IDE, OS, .prd/)
-   - `git add .gitignore && git commit -m "chore: initialize repository with .gitignore"`
-3. `git add -A`
-4. `git diff --cached` to review
-5. `git commit -m "feat: {story_id} - {story_title}"`
+
+1. **Ensure git repo exists:**
+   - Run `git rev-parse --is-inside-work-tree`
+   - If NOT a git repo:
+     - `git init`
+     - Create `.gitignore` (Python, Node, env, IDE, OS, .prd/)
+     - `git add .gitignore && git commit -m "chore: initialize repository with .gitignore"`
+
+2. **Ensure GitHub remote exists:**
+   - Run `git remote get-url origin` to check
+   - If no remote:
+     - Infer repo name from the current directory name
+     - `gh repo create <repo-name> --private --source=. --push`
+   - If remote exists but repo doesn't exist on GitHub:
+     - `gh repo create <owner>/<repo-name> --private --source=. --push`
+
+3. **Commit and push:**
+   - `git add -A`
+   - `git diff --cached` to review
+   - `git commit -m "feat: {story_id} - {story_title}"`
+   - `git push`
 
 ### Step 8: Update PRD
 Mark the story as complete in the PRD file:

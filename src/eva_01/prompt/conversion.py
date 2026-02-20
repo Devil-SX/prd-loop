@@ -40,7 +40,7 @@ Generate a valid JSON object with this exact structure:
 
 ## Rules for PRD Generation:
 1. **Analyze existing code patterns** - Follow the project's existing conventions, file organization, and coding style
-2. **Consider dependencies** - Order stories by dependency (schema/types first, then core logic, then UI/API)
+2. **Consider ALL dependencies** - Order stories by ALL dependency types, not just code/module dependencies (schema before logic, logic before UI). Also detect knowledge dependencies (research/investigate before implement), decision dependencies (evaluate before choose), data dependencies (generate before analyze), and any phase/ordering constraints in the spec. Look for ordering signals: explicit phase numbers, words like "before/after/depends on/based on/先…再…/依赖于", and logical prerequisites. A story whose output informs another story's design MUST have a lower priority number.
 3. **Reference existing files** - In the notes field, mention specific files that will be modified or extended
 4. **Incremental development** - Stories should build on existing codebase, not rewrite from scratch
 5. **Small atomic stories** - Each story should be completable in one Claude session

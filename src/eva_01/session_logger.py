@@ -4,8 +4,8 @@ Creates a session directory structure:
     .prd/logs/session_YYYYMMDD_HHMMSS/
         ├── config.json          # All configuration options
         ├── prd_snapshot.json    # PRD state at start
-        ├── loop_001.log         # Stream output for loop 1
-        ├── loop_002.log         # Stream output for loop 2
+        ├── loop_001.jsonl       # Raw stream-json output for loop 1
+        ├── loop_002.jsonl       # Raw stream-json output for loop 2
         ├── ...
         └── summary.json         # Final summary report
 """
@@ -221,7 +221,7 @@ class SessionLogger:
             self.current_loop_file = None
 
         # Create loop record
-        log_filename = f"loop_{loop_num:03d}.log"
+        log_filename = f"loop_{loop_num:03d}.jsonl"
         log_path = self.session_dir / log_filename
 
         self.current_loop = LoopRecord(
@@ -232,14 +232,8 @@ class SessionLogger:
             log_file=log_filename
         )
 
-        # Open log file for this loop
+        # Open log file for this loop (raw JSONL from Claude stream-json)
         self.current_loop_file = open(log_path, "w", encoding="utf-8")
-
-        # Write header
-        self.current_loop_file.write(f"# Loop {loop_num}: {story_id} - {story_title}\n")
-        self.current_loop_file.write(f"# Started: {self.current_loop.start_time}\n")
-        self.current_loop_file.write("=" * 60 + "\n\n")
-        self.current_loop_file.flush()
 
         # Start timer
         self.timers[f"loop_{loop_num}"] = time.time()
@@ -285,17 +279,8 @@ class SessionLogger:
         self.current_loop.timeout = timeout
         self.current_loop.error = error
 
-        # Write footer to loop file
+        # Close loop log file (raw JSONL, no footer needed — metadata is in summary.json)
         if self.current_loop_file:
-            self.current_loop_file.write("\n" + "=" * 60 + "\n")
-            self.current_loop_file.write(f"# Ended: {self.current_loop.end_time}\n")
-            self.current_loop_file.write(f"# Duration: {self.format_duration(duration)}\n")
-            self.current_loop_file.write(f"# Success: {success}\n")
-            self.current_loop_file.write(f"# Story Passed: {story_passed}\n")
-            if timeout:
-                self.current_loop_file.write(f"# Timeout: {timeout}\n")
-            if error:
-                self.current_loop_file.write(f"# Error: {error}\n")
             self.current_loop_file.close()
             self.current_loop_file = None
 

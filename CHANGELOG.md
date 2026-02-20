@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-20
+
+### Added
+- GitHub repo auto-creation in impl-prd (Step 7: `gh repo create --private` if no remote)
+- `Bash(gh *)` to default allowed_tools for GitHub CLI operations
+- Generalized dependency detection in spec-to-prd Rule 2: knowledge, decision, data, and phase dependencies (not just code/module)
+
+### Changed
+- Loop log files from `.log` with text headers/footers to raw `.jsonl` (pure Claude stream-json output)
+- `CLAUDE.md` now requires syncing `marketplace.json` version on release
+
 ## [0.2.0] - 2026-02-20
 
 ### Added

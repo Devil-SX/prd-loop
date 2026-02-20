@@ -22,7 +22,8 @@ class Config:
         if self.allowed_tools is None:
             self.allowed_tools = [
                 "Write", "Read", "Edit", "Glob",
-                "Bash(git *)", "Bash(npm *)", "Bash(npx *)",
+                "Bash(git *)", "Bash(gh *)",
+                "Bash(npm *)", "Bash(npx *)",
                 "Bash(pytest)", "Bash(python -m pytest *)",
             ]
 
