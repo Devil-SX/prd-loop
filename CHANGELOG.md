@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-23
+
+> **Code Stats** | Total: 5,313 lines | Delta: +32 (-13) = **+19 net** | Change: **+0.4%** vs v0.3.0
+
+### Added
+- `/discuss_spec` accepts free-form description as input (no file required)
+- `/discuss_spec` offers "Start execution now" option via `EnterPlanMode` after discussion
+
+### Changed
+- `/discuss_spec` decoupled from PRD pipeline — execution path uses Claude Code plan mode instead of spec-to-prd/impl-prd
+- observe-impl log files: `observation.log` → `observation.jsonl` (raw stream-json)
+- observe prompt: `loop_*.log` reference → `loop_*.jsonl`
+
 ## [0.3.0] - 2026-02-20
 
 ### Added

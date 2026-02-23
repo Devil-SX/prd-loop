@@ -1,7 +1,7 @@
 ---
 name: discuss_spec
 description: Front-load all ambiguity resolution into the spec stage so the plan can execute in one shot without repeated user interaction later.
-argument-hint: [spec file path]
+argument-hint: [spec file path or description]
 ---
 
 # Core Philosophy
@@ -12,9 +12,16 @@ Your goal: produce a spec so complete and a plan so precise that a downstream ag
 
 ---
 
-Read the spec file provided by the user. If no file path is given, ask the user which spec they want to discuss.
+# Input Handling
 
-After reading the spec, also read the repo's README, CLAUDE.md, directory structure, and other context to build a holistic understanding of the repository.
+This command accepts two input modes:
+
+1. **File path**: If the argument is a file path (e.g., `my-feature.md`), read the spec file and proceed with discussion.
+2. **Description**: If the argument is a text description (not a file path), or if no argument is given, treat it as a free-form feature description and start the discussion from scratch.
+
+**How to distinguish**: Check if the argument is an existing file path. If yes → file mode. If no → description mode.
+
+After reading the spec (file mode) or understanding the description (description mode), also read the repo's README, CLAUDE.md, directory structure, and other context to build a holistic understanding of the repository.
 
 # Good Behaviors
 
@@ -76,10 +83,22 @@ These engineering details should also be aligned with the user step by step via 
 
 ## Final Output
 
-After all discussion rounds are complete, write the results back to the spec file. The updated spec should be **self-contained** — anyone reading it should be able to implement without asking further questions.
+After all discussion rounds are complete, ask the user how to proceed:
+
+Use `AskUserQuestion` with these options:
+- **Save as spec file** — Write the finalized spec to a markdown file
+- **Start execution now** — Generate a plan and begin implementing immediately
+
+### If saving as spec file:
+Write the results to the spec file (original file in file mode, or a new file in description mode). The updated spec should be **self-contained** — anyone reading it should be able to implement without asking further questions.
 
 Updated content must include:
 - Complete requirements description after clarification
 - Expanded/corrected plan with enough detail to execute without interruption
 - Key engineering decisions and constraints
 - Clear acceptance criteria
+
+### If starting execution:
+1. Synthesize all discussion results into a detailed implementation plan
+2. Use `EnterPlanMode` to present the plan and get user approval
+3. After approval, implement the plan directly

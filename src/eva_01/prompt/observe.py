@@ -37,7 +37,7 @@ gh repo list --json name,url --limit 100
 1. Read `summary.json` for overall session statistics
 2. Read `session.log` for main execution flow
 3. Read `prd_snapshot.json` for task description
-4. Read `loop_*.log` files for detailed Claude interactions
+4. Read `loop_*.jsonl` files for detailed Claude interactions
 
 ### Step 2: Write the observation report
 Write a markdown report to: {session_dir}/observation_report.md

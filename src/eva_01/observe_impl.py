@@ -73,7 +73,7 @@ def find_latest_session(logs_dir: Path) -> Path | None:
 def cleanup_previous_observation(session_dir: Path) -> None:
     """Remove previous observation files if they exist."""
     files_to_remove = [
-        session_dir / "observation.log",
+        session_dir / "observation.jsonl",
         session_dir / "observation_report.md",
         # Also clean up old naming convention
         session_dir / "observe.log",
@@ -153,7 +153,7 @@ def run_observe(session_dir: Path, create_issue: bool = True, model: str = "haik
     print(f"\nAnalyzing with Claude ({model})...\n")
 
     # Open log file for stream output
-    observation_log_path = session_dir / "observation.log"
+    observation_log_path = session_dir / "observation.jsonl"
     with open(observation_log_path, "w", encoding="utf-8") as log_file:
         result = cli.execute(prompt, log_file=log_file)
 
