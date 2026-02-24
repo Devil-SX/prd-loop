@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-24
+
+> **Code Stats** | Total: 5,594 lines | Delta: +268 (-0) = **+268 net** | Change: **+5.0%** vs v0.4.0
+
+### Added
+- `/structured_repo` skill — repository structure conventions (CLAUDE.md, README.md, ARCHITECTURE.md, CHANGELOG.md, .gitignore, CI) with `init`, `audit`, and `update` subcommands
+
 ## [0.4.0] - 2026-02-23
 
 > **Code Stats** | Total: 5,313 lines | Delta: +32 (-13) = **+19 net** | Change: **+0.4%** vs v0.3.0

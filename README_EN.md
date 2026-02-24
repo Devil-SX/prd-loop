@@ -1,10 +1,10 @@
 <h1 align="center">EVA-01</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.4.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-0.5.0-blue" alt="version">
   <img src="https://img.shields.io/badge/Python-1887_lines-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Shell-248_lines-4EAA25?logo=gnubash&logoColor=white" alt="Shell">
-  <img src="https://img.shields.io/badge/Markdown-68_lines-000000?logo=markdown&logoColor=white" alt="Markdown">
+  <img src="https://img.shields.io/badge/Markdown-262_lines-000000?logo=markdown&logoColor=white" alt="Markdown">
 </p>
 
 <p align="center">
