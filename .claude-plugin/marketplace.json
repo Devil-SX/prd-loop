@@ -9,7 +9,7 @@
       "name": "eva-01",
       "source": "./",
       "description": "EVA-01: Automated life testing platform with spec discussion, PRD generation, implementation, and observation commands",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "author": {
         "name": "Devil-SX",
         "email": "sduaf@connect.ust.hk"

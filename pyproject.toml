@@ -1,6 +1,6 @@
 [project]
 name = "eva-01"
-version = "0.5.0"
+version = "0.5.1"
 description = "EVA-01: Automated life testing platform prototype"
 readme = "README.md"
 requires-python = ">=3.8"

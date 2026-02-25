@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-02-25
+
+> **Code Stats** | Total: 5,261 lines | Delta: +56 (-397) = **-341 net** | Change: **-6.1%** vs v0.5.0
+
+### Added
+- New untracked files: `ARCHITECTURE.md`, `docs/` directory (design-philosophy.md, prd-protocol.md)
+- Expanded `.gitignore` — OS files (.DS_Store, Thumbs.db), environment/secrets (.env, .env.local, *.pem, credentials.*)
+
+### Changed
+- Restructured `CLAUDE.md` — Quick Reference, Project Index, Commit Conventions, Development Notes
+- Simplified `README.md` and `README_EN.md` — extracted design philosophy and PRD protocol to separate docs under `docs/`
+- Updated default model from `sonnet` to `opus` in documentation for `spec-to-prd` and `impl-prd`
+
 ## [0.5.0] - 2026-02-24
 
 > **Code Stats** | Total: 5,594 lines | Delta: +268 (-0) = **+268 net** | Change: **+5.0%** vs v0.4.0
